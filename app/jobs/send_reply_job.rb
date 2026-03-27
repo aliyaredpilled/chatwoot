@@ -5,6 +5,7 @@ class SendReplyJob < ApplicationJob
     'Channel::TwitterProfile' => ::Twitter::SendOnTwitterService,
     'Channel::TwilioSms' => ::Twilio::SendOnTwilioService,
     'Channel::Line' => ::Line::SendOnLineService,
+    'Channel::Max' => ::Max::SendOnMaxService,
     'Channel::Telegram' => ::Telegram::SendOnTelegramService,
     'Channel::Whatsapp' => ::Whatsapp::SendOnWhatsappService,
     'Channel::Sms' => ::Sms::SendOnSmsService,

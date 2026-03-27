@@ -1,6 +1,6 @@
 module Api::V1::InboxesHelper
   def inbox_name(channel)
-    return channel.try(:bot_name) if channel.is_a?(Channel::Telegram)
+    return channel.try(:bot_name) if channel.is_a?(Channel::Telegram) || channel.is_a?(Channel::Max)
 
     permitted_params[:name]
   end
@@ -101,6 +101,7 @@ module Api::V1::InboxesHelper
       'api' => Current.account.api_channels,
       'email' => Current.account.email_channels,
       'line' => Current.account.line_channels,
+      'max' => Current.account.max_channels,
       'telegram' => Current.account.telegram_channels,
       'whatsapp' => Current.account.whatsapp_channels,
       'sms' => Current.account.sms_channels
