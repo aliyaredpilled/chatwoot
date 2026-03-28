@@ -6,6 +6,7 @@ class SendReplyJob < ApplicationJob
     'Channel::TwilioSms' => ::Twilio::SendOnTwilioService,
     'Channel::Line' => ::Line::SendOnLineService,
     'Channel::Max' => ::Max::SendOnMaxService,
+    'Channel::Umnico' => ::Umnico::SendOnUmnicoService,
     'Channel::Telegram' => ::Telegram::SendOnTelegramService,
     'Channel::Whatsapp' => ::Whatsapp::SendOnWhatsappService,
     'Channel::Sms' => ::Sms::SendOnSmsService,

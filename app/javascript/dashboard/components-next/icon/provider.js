@@ -6,6 +6,8 @@ export function useChannelIcon(inbox) {
     'Channel::Email': 'i-woot-mail',
     'Channel::FacebookPage': 'i-woot-messenger',
     'Channel::Line': 'i-woot-line',
+    'Channel::Max': 'i-ri-chat-1-line',
+    'Channel::Umnico': 'i-ri-links-line',
     'Channel::Sms': 'i-woot-sms',
     'Channel::Telegram': 'i-woot-telegram',
     'Channel::TwilioSms': 'i-woot-sms',

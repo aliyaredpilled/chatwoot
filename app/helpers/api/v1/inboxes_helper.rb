@@ -102,6 +102,7 @@ module Api::V1::InboxesHelper
       'email' => Current.account.email_channels,
       'line' => Current.account.line_channels,
       'max' => Current.account.max_channels,
+      'umnico' => Current.account.umnico_channels,
       'telegram' => Current.account.telegram_channels,
       'whatsapp' => Current.account.whatsapp_channels,
       'sms' => Current.account.sms_channels

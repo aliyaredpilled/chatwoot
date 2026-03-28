@@ -158,6 +158,10 @@ class Inbox < ApplicationRecord
     channel_type == 'Channel::Max'
   end
 
+  def umnico?
+    channel_type == 'Channel::Umnico'
+  end
+
   def whatsapp?
     channel_type == 'Channel::Whatsapp'
   end
@@ -196,6 +200,8 @@ class Inbox < ApplicationRecord
       "#{ENV.fetch('FRONTEND_URL', nil)}/webhooks/line/#{channel.line_channel_id}"
     when 'Channel::Whatsapp'
       "#{ENV.fetch('FRONTEND_URL', nil)}/webhooks/whatsapp/#{channel.phone_number}"
+    when 'Channel::Umnico'
+      "#{ENV.fetch('FRONTEND_URL', nil)}/webhooks/umnico/#{channel.webhook_secret}"
     end
   end
 

@@ -6,6 +6,8 @@ export const INBOX_TYPES = {
   WHATSAPP: 'Channel::Whatsapp',
   API: 'Channel::Api',
   EMAIL: 'Channel::Email',
+  MAX: 'Channel::Max',
+  UMNICO: 'Channel::Umnico',
   TELEGRAM: 'Channel::Telegram',
   LINE: 'Channel::Line',
   SMS: 'Channel::Sms',
@@ -26,6 +28,8 @@ const INBOX_ICON_MAP_FILL = {
   [INBOX_TYPES.WHATSAPP]: 'i-ri-whatsapp-fill',
   [INBOX_TYPES.API]: 'i-ri-cloudy-fill',
   [INBOX_TYPES.EMAIL]: 'i-ri-mail-fill',
+  [INBOX_TYPES.MAX]: 'i-ri-chat-1-fill',
+  [INBOX_TYPES.UMNICO]: 'i-ri-links-fill',
   [INBOX_TYPES.TELEGRAM]: 'i-ri-telegram-fill',
   [INBOX_TYPES.LINE]: 'i-ri-line-fill',
   [INBOX_TYPES.INSTAGRAM]: 'i-ri-instagram-fill',
@@ -42,6 +46,8 @@ const INBOX_ICON_MAP_LINE = {
   [INBOX_TYPES.WHATSAPP]: 'i-woot-whatsapp',
   [INBOX_TYPES.API]: 'i-woot-api',
   [INBOX_TYPES.EMAIL]: 'i-woot-mail',
+  [INBOX_TYPES.MAX]: 'i-ri-chat-1-line',
+  [INBOX_TYPES.UMNICO]: 'i-ri-links-line',
   [INBOX_TYPES.TELEGRAM]: 'i-woot-telegram',
   [INBOX_TYPES.LINE]: 'i-woot-line',
   [INBOX_TYPES.INSTAGRAM]: 'i-woot-instagram',
@@ -91,6 +97,12 @@ export const getReadableInboxByType = (type, phoneNumber) => {
     case INBOX_TYPES.EMAIL:
       return 'email';
 
+    case INBOX_TYPES.MAX:
+      return 'max';
+
+    case INBOX_TYPES.UMNICO:
+      return 'umnico';
+
     case INBOX_TYPES.TELEGRAM:
       return 'telegram';
 
@@ -129,6 +141,12 @@ export const getInboxClassByType = (type, phoneNumber) => {
 
     case INBOX_TYPES.EMAIL:
       return 'mail';
+
+    case INBOX_TYPES.MAX:
+      return 'messages';
+
+    case INBOX_TYPES.UMNICO:
+      return 'links';
 
     case INBOX_TYPES.TELEGRAM:
       return 'brand-telegram';
