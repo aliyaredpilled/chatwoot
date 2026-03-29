@@ -1,17 +1,34 @@
 class Umnico::IncomingMessageService
   pattr_initialize [:inbox!, :params!]
 
+  # Real webhook payload for message.incoming:
+  # {
+  #   "type": "message.incoming",
+  #   "accountId": 162545,
+  #   "leadId": 64951289,
+  #   "isNewLead": true,
+  #   "isNewCustomer": true,
+  #   "message": {
+  #     "messageId": 11070,
+  #     "datetime": "2026-03-29T00:55:07.000Z",
+  #     "sa": { "id": 111328, "type": "telegram", "login": "skynet_kazan_support" },
+  #     "message": { "text": "привет", "attachments": [] },
+  #     "incoming": true,
+  #     "sender": {
+  #       "id": 65070946, "customerId": 69524567,
+  #       "login": "aliya_arkhangelsk", "type": "telegram",
+  #       "socialId": "user_647960541", "profileUrl": "https://t.me/aliya_arkhangelsk"
+  #     },
+  #     "source": { "id": "user_7715692646", "realId": 76919905, "saId": 111328 },
+  #     "replyTo": nil
+  #   }
+  # }
+
   def perform
     return unless params['type'] == 'message.incoming'
     return if lead_id.blank?
-
-    # Webhook может содержать message объект, но для контакта нужен lead
-    fetch_lead_details
-    return if @lead.blank?
-
-    # Используем message из webhook если есть, иначе из lead
-    @message_data = params['message'] || extract_last_message_from_lead
-    return if @message_data.blank?
+    return if webhook_message.blank?
+    return if message_id.blank?
     return if duplicate_message?
 
     set_contact
@@ -25,39 +42,52 @@ class Umnico::IncomingMessageService
     params['leadId']
   end
 
-  def fetch_lead_details
-    @lead = channel.api_client.get_lead(lead_id)
-  rescue ::Umnico::ApiClient::Error => e
-    Rails.logger.error("Umnico: failed to fetch lead #{lead_id}: #{e.message}")
-    @lead = nil
+  def webhook_message
+    @webhook_message ||= params['message'] || {}
   end
 
-  def extract_last_message_from_lead
-    # Lead response contains lastMessage or similar
-    @lead['lastMessage'] || @lead['message']
+  def sender
+    @sender ||= webhook_message['sender'] || {}
+  end
+
+  def sa
+    @sa ||= webhook_message['sa'] || {}
+  end
+
+  def message_body
+    @message_body ||= webhook_message['message'] || {}
+  end
+
+  def message_id
+    webhook_message['messageId']
+  end
+
+  def message_text
+    message_body['text'].to_s
+  end
+
+  def message_attachments
+    message_body['attachments'] || []
+  end
+
+  def integration_type
+    sa['type'] || sender['type'] || 'unknown'
+  end
+
+  def customer_id
+    sender['customerId']
+  end
+
+  def contact_source_id
+    "umnico:#{customer_id}"
   end
 
   def duplicate_message?
-    msg_id = @message_data['id']&.to_s
-    return true if msg_id.blank?
-
-    Message.exists?(inbox_id: inbox.id, source_id: "umnico:#{msg_id}")
+    Message.exists?(inbox_id: inbox.id, source_id: "umnico:#{message_id}")
   end
 
   def channel
     @channel ||= inbox.channel
-  end
-
-  def customer
-    @customer ||= @lead['customer'] || {}
-  end
-
-  def integration_type
-    @lead.dig('sa', 'type') || 'unknown'
-  end
-
-  def contact_source_id
-    "umnico:#{customer['id']}"
   end
 
   def set_contact
@@ -90,6 +120,7 @@ class Umnico::IncomingMessageService
       contact_inbox_id: @contact_inbox.id,
       additional_attributes: {
         lead_id: lead_id,
+        umnico_source: webhook_message.dig('source', 'realId')&.to_s,
         provider: 'umnico',
         messenger_type: integration_type
       }.compact
@@ -97,71 +128,73 @@ class Umnico::IncomingMessageService
   end
 
   def create_message
-    text = @message_data['text'].to_s
-    attachment_data = @message_data['attachment']
+    content = message_text.presence || attachment_label
+    return if content.blank?
 
     msg = @conversation.messages.create!(
-      content: text.presence || attachment_label(attachment_data),
+      content: content,
       account_id: inbox.account_id,
       inbox_id: inbox.id,
       message_type: :incoming,
       sender: @contact,
-      source_id: "umnico:#{@message_data['id']}",
+      source_id: "umnico:#{message_id}",
       content_attributes: {
-        external_created_at: @message_data['datetime'] || @message_data['createdAt'],
+        external_created_at: webhook_message['datetime'],
         lead_id: lead_id,
         messenger_type: integration_type
       }.compact
     )
 
-    process_attachments(msg, attachment_data) if attachment_data.present?
+    process_attachments(msg)
     msg
   end
 
-  def attachment_label(attachment_data)
-    return '' if attachment_data.blank?
+  def attachment_label
+    return '' if message_attachments.blank?
 
-    type = attachment_data['type'] || 'file'
+    first = message_attachments.first
+    type = first['type'] || 'file'
     "[#{type}]"
   end
 
-  def process_attachments(msg, attachment_data)
-    return if attachment_data.blank?
+  def process_attachments(msg)
+    message_attachments.each do |att|
+      url = att.dig('payload', 'url') || att['url'] || att['src']
+      next if url.blank?
 
-    url = attachment_data.dig('media', 'url') || attachment_data['src'] || attachment_data['url']
-    return if url.blank?
+      file_type = map_attachment_type(att['type'])
 
-    file_type = map_attachment_type(attachment_data['type'])
-
-    msg.attachments.create!(
-      account_id: inbox.account_id,
-      file_type: file_type,
-      external_url: url
-    )
-  rescue StandardError => e
-    Rails.logger.error("Umnico: failed to process attachment: #{e.message}")
+      msg.attachments.create!(
+        account_id: inbox.account_id,
+        file_type: file_type,
+        external_url: url
+      )
+    rescue StandardError => e
+      Rails.logger.error("Umnico: failed to process attachment: #{e.message}")
+    end
   end
 
   def map_attachment_type(umnico_type)
     case umnico_type
-    when 'photo'   then :image
-    when 'video'   then :video
-    when 'audio'   then :audio
-    when 'sticker' then :image
+    when 'photo', 'image' then :image
+    when 'video'          then :video
+    when 'audio'          then :audio
+    when 'sticker'        then :image
     else :file
     end
   end
 
   def contact_attributes
-    name = customer['name'].presence || customer['phone'].presence || "Umnico #{customer['id']}"
+    name = sender['login'].presence || sender['name'].presence || "Umnico #{customer_id}"
     {
       name: name,
       identifier: contact_source_id,
-      phone_number: customer['phone'],
       additional_attributes: {
         provider: 'umnico',
-        umnico_customer_id: customer['id'],
-        messenger_type: integration_type
+        umnico_customer_id: customer_id,
+        messenger_type: integration_type,
+        social_id: sender['socialId'],
+        profile_url: sender['profileUrl']
       }.compact
     }
   end

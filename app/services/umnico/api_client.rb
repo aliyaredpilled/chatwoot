@@ -83,6 +83,11 @@ module Umnico
       request(:get, "/customers/#{customer_id}/")
     end
 
+    # Get managers (employees) list
+    def get_managers
+      request(:get, '/managers')
+    end
+
     private
 
     attr_reader :api_token, :base_url

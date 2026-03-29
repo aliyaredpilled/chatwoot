@@ -16,6 +16,7 @@ const {
   isASmsInbox,
   isATelegramChannel,
   isATwilioChannel,
+  isAUmnicoChannel,
   isAWebWidgetInbox,
   isAWhatsAppChannel,
   isAnEmailChannel,
@@ -61,6 +62,7 @@ const isSent = computed(() => {
     isAFacebookInbox.value ||
     isASmsInbox.value ||
     isATelegramChannel.value ||
+    isAUmnicoChannel.value ||
     isAnInstagramChannel.value ||
     isATiktokChannel.value
   ) {
@@ -73,7 +75,8 @@ const isSent = computed(() => {
   // All messages will be mark as sent for the Line channel, as there is no source ID.
   if (isALineChannel.value) return true;
 
-  return false;
+  // Fallback for custom channels (Umnico, Max, etc): sent if sourceId exists
+  return !!sourceId.value;
 });
 
 const isDelivered = computed(() => {
@@ -84,6 +87,7 @@ const isDelivered = computed(() => {
     isATwilioChannel.value ||
     isASmsInbox.value ||
     isAFacebookInbox.value ||
+    isAUmnicoChannel.value ||
     isAnInstagramChannel.value ||
     isATiktokChannel.value
   ) {
@@ -99,7 +103,8 @@ const isDelivered = computed(() => {
     return status.value === MESSAGE_STATUS.DELIVERED;
   }
 
-  return false;
+  // Fallback for custom channels: delivered if sourceId + delivered status
+  return sourceId.value && status.value === MESSAGE_STATUS.DELIVERED;
 });
 
 const isRead = computed(() => {
@@ -109,6 +114,7 @@ const isRead = computed(() => {
     isAWhatsAppChannel.value ||
     isATwilioChannel.value ||
     isAFacebookInbox.value ||
+    isAUmnicoChannel.value ||
     isAnInstagramChannel.value ||
     isATiktokChannel.value
   ) {

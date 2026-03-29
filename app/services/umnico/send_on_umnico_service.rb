@@ -17,14 +17,29 @@ class Umnico::SendOnUmnicoService < Base::SendOnChannelService
     message.update!(source_id: "umnico_out_#{Time.current.to_i}") if message.source_id.blank?
   end
 
+  def conversation_attrs
+    @conversation_attrs ||= message.conversation.additional_attributes || {}
+  end
+
   def resolved_lead_id
-    attrs = message.conversation.additional_attributes || {}
-    attrs['lead_id']
+    conversation_attrs['lead_id']
+  end
+
+  def resolved_source
+    conversation_attrs['umnico_source']
+  end
+
+  def umnico_user_id
+    @umnico_user_id ||= begin
+      managers = channel.api_client.get_managers
+      owner = managers.find { |m| m['role'] == 'owner' } || managers.first
+      owner&.dig('id')
+    end
   end
 
   def send_text_chunks(lead_id)
     chunk_text(message.outgoing_content.to_s).each do |chunk|
-      channel.api_client.send_message(lead_id: lead_id, text: chunk)
+      channel.api_client.send_message(lead_id: lead_id, text: chunk, source: resolved_source, user_id: umnico_user_id)
     end
   end
 
@@ -36,6 +51,8 @@ class Umnico::SendOnUmnicoService < Base::SendOnChannelService
       type = map_file_type(attachment.file_type)
       channel.api_client.send_message(
         lead_id: lead_id,
+        source: resolved_source,
+        user_id: umnico_user_id,
         attachment: {
           type: type,
           media: { url: url }

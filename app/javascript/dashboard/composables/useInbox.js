@@ -79,6 +79,10 @@ export const useInbox = (inboxId = null) => {
     return channelType.value === INBOX_TYPES.TELEGRAM;
   });
 
+  const isAUmnicoChannel = computed(() => {
+    return channelType.value === INBOX_TYPES.UMNICO;
+  });
+
   const whatsAppAPIProvider = computed(() => {
     return inbox.value?.provider || '';
   });
@@ -156,6 +160,7 @@ export const useInbox = (inboxId = null) => {
     isAnEmailChannel,
     isAnInstagramChannel,
     isATiktokChannel,
+    isAUmnicoChannel,
     isAVoiceChannel,
   };
 };
