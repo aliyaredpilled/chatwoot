@@ -111,6 +111,7 @@ class Umnico::IncomingMessageService
       @conversation = ::Conversation.create!(conversation_params)
     end
     apply_messenger_label
+    enrich_conversation_from_lead
   end
 
   def apply_messenger_label
@@ -122,6 +123,39 @@ class Umnico::IncomingMessageService
     return if current.include?(label)
 
     @conversation.update!(label_list: (current + [label]).uniq)
+  end
+
+  def enrich_conversation_from_lead
+    return unless params['isNewLead'] == true
+
+    client = api_client
+    lead = client.get_lead(lead_id)
+    return unless lead.is_a?(Hash)
+
+    attrs = {}
+
+    attrs[:umnico_status]  = lead['statusId']  if lead['statusId'].present?
+    attrs[:umnico_tags]    = lead['tags']       if lead['tags'].is_a?(Array) && lead['tags'].any?
+    attrs[:umnico_details] = lead['details']    if lead['details'].present?
+    attrs[:umnico_amount]  = lead['amount']     if lead['amount'].present?
+
+    custom_fields = lead['customFields']
+    if custom_fields.is_a?(Hash)
+      custom_fields.each do |key, value|
+        field_value = value.is_a?(Hash) ? value['value'] : value
+        attrs["cf_#{key}"] = field_value if field_value.present?
+      end
+    end
+
+    items = lead['items']
+    attrs[:umnico_items] = items if items.is_a?(Array) && items.any?
+
+    return if attrs.empty?
+
+    existing = @conversation.custom_attributes || {}
+    @conversation.update!(custom_attributes: existing.merge(attrs.stringify_keys))
+  rescue StandardError => e
+    Rails.logger.warn("Umnico: failed to enrich conversation #{lead_id} from lead: #{e.message}")
   end
 
   MESSENGER_LABELS = {
@@ -269,10 +303,14 @@ class Umnico::IncomingMessageService
     enrich_from_umnico(attrs)
   end
 
+  def api_client
+    @api_client ||= Umnico::ApiClient.new(api_token: channel.api_token)
+  end
+
   def enrich_from_umnico(attrs)
     return attrs if customer_id.blank?
 
-    client = Umnico::ApiClient.new(api_token: channel.api_token)
+    client = api_client
     customer = client.get_customer(customer_id)
     return attrs unless customer.is_a?(Hash)
 

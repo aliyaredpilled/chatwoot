@@ -99,6 +99,34 @@ module Umnico
       request(:get, '/managers')
     end
 
+    # List all integrations for the account
+    def list_integrations
+      request(:get, '/integrations')
+    end
+
+    # Write first to a new contact (POST /v1.3/messaging/post)
+    # sa_id:       integration ID (integer)
+    # destination: phone number, Telegram login, or email
+    # text:        message text
+    # custom_id:   optional opaque string for deduplication
+    def send_outbound_message(sa_id:, destination:, text:, custom_id: nil)
+      body = {
+        message: { text: text },
+        saId: sa_id,
+        destination: destination
+      }
+      body[:customId] = custom_id if custom_id.present?
+
+      request(:post, '/messaging/post', body: body)
+    end
+
+    # Check whether a WhatsApp/WABA number exists
+    # sa_id:   integration ID
+    # chat_id: phone number to check
+    def check_contact(sa_id:, chat_id:)
+      request(:post, '/messaging/check-contact', body: { saId: sa_id, chatId: chat_id })
+    end
+
     private
 
     attr_reader :api_token, :base_url

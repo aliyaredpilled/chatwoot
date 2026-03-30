@@ -358,6 +358,11 @@ Rails.application.routes.draw do
           end
 
           resources :upload, only: [:create]
+
+          namespace :umnico do
+            get :integrations
+            post :send_outbound
+          end
         end
       end
       # end of account scoped api routes
