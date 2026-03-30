@@ -16,8 +16,6 @@ class Webhooks::UmnicoEventsJob < ApplicationJob
     case params['type']
     when 'message.incoming'
       ::Umnico::IncomingMessageService.new(inbox: inbox, params: params).perform
-    when 'message.outgoing'
-      ::Umnico::OutgoingMessageSyncService.new(inbox: inbox, params: params).perform
     when 'customer.changed', 'customer.created'
       ::Umnico::CustomerSyncService.new(inbox: inbox, params: params).perform
     end
