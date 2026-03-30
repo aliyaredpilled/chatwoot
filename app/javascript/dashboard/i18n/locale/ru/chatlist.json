@@ -141,5 +141,21 @@
     "SHOW_QUOTED_TEXT": "Показать цитируемый текст",
     "MESSAGE_READ": "Прочитано",
     "SENDING": "Отправка"
+  },
+  "UMNICO_OUTBOUND": {
+    "TITLE": "Написать первым",
+    "TOOLTIP": "Написать первым (исходящее)",
+    "INTEGRATION_LABEL": "Интеграция",
+    "INTEGRATION_PLACEHOLDER": "Выберите интеграцию",
+    "DESTINATION_LABEL": "Получатель",
+    "DESTINATION_PLACEHOLDER": "Телефон, логин или email",
+    "MESSAGE_LABEL": "Сообщение",
+    "MESSAGE_PLACEHOLDER": "Введите сообщение",
+    "SEND_BUTTON": "Отправить",
+    "CANCEL_BUTTON": "Отмена",
+    "LOADING_INTEGRATIONS": "Загрузка интеграций...",
+    "NO_INTEGRATIONS": "Нет интеграций для этого inbox.",
+    "SUCCESS": "Сообщение отправлено.",
+    "ERROR": "Не удалось отправить. Попробуйте ещё раз."
   }
 }

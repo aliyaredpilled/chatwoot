@@ -141,5 +141,21 @@
     "SHOW_QUOTED_TEXT": "Show Quoted Text",
     "MESSAGE_READ": "Read",
     "SENDING": "Sending"
+  },
+  "UMNICO_OUTBOUND": {
+    "TITLE": "Write First",
+    "TOOLTIP": "Write First (outbound)",
+    "INTEGRATION_LABEL": "Integration",
+    "INTEGRATION_PLACEHOLDER": "Select integration",
+    "DESTINATION_LABEL": "Recipient",
+    "DESTINATION_PLACEHOLDER": "Phone, username, or login",
+    "MESSAGE_LABEL": "Message",
+    "MESSAGE_PLACEHOLDER": "Type your message",
+    "SEND_BUTTON": "Send",
+    "CANCEL_BUTTON": "Cancel",
+    "LOADING_INTEGRATIONS": "Loading integrations...",
+    "NO_INTEGRATIONS": "No integrations found for this inbox.",
+    "SUCCESS": "Message sent successfully.",
+    "ERROR": "Failed to send message. Please try again."
   }
 }

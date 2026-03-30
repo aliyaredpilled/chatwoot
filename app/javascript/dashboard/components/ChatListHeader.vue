@@ -1,12 +1,15 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { useMapGetter } from 'dashboard/composables/store';
+import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { formatNumber } from '@chatwoot/utils';
 import wootConstants from 'dashboard/constants/globals';
 
 import ConversationBasicFilter from './widgets/conversation/ConversationBasicFilter.vue';
 import SwitchLayout from 'dashboard/routes/dashboard/conversation/search/SwitchLayout.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import UmnicoOutboundModal from './widgets/conversation/UmnicoOutboundModal.vue';
 
 const props = defineProps({
   pageTitle: { type: String, required: true },
@@ -27,6 +30,12 @@ const emit = defineEmits([
 ]);
 
 const { uiSettings, updateUISettings } = useUISettings();
+
+const umnicoOutboundModalRef = ref(null);
+const inboxes = useMapGetter('inboxes/getInboxes');
+const hasUmnicoInbox = computed(() =>
+  inboxes.value.some(inbox => inbox.channel_type === INBOX_TYPES.UMNICO)
+);
 
 const onBasicFilterChange = (value, type) => {
   emit('basicFilterChange', value, type);
@@ -159,10 +168,20 @@ const toggleConversationLayout = () => {
         :is-on-expanded-layout="isOnExpandedLayout"
         @change-filter="onBasicFilterChange"
       />
+      <NextButton
+        v-if="hasUmnicoInbox"
+        v-tooltip.top-end="$t('UMNICO_OUTBOUND.TOOLTIP')"
+        icon="i-lucide-pencil-line"
+        slate
+        xs
+        faded
+        @click="umnicoOutboundModalRef?.open()"
+      />
       <SwitchLayout
         :is-on-expanded-layout="isOnExpandedLayout"
         @toggle="toggleConversationLayout"
       />
     </div>
   </div>
+  <UmnicoOutboundModal ref="umnicoOutboundModalRef" />
 </template>
