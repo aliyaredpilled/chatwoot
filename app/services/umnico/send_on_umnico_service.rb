@@ -49,18 +49,20 @@ class Umnico::SendOnUmnicoService < Base::SendOnChannelService
   # Looks at content_attributes['in_reply_to_external_id'], resolves the
   # source_id of that Chatwoot message, and strips the "umnico:" prefix.
   def resolved_reply_id
-    @resolved_reply_id ||= begin
-      reply_to_id = message.content_attributes&.dig('in_reply_to_external_id')
-      next nil if reply_to_id.blank?
+    @resolved_reply_id ||= compute_reply_id
+  end
 
-      parent = message.conversation.messages.find_by(id: reply_to_id)
-      next nil if parent&.source_id.blank?
+  def compute_reply_id
+    reply_to_id = message.content_attributes&.dig('in_reply_to_external_id')
+    return nil if reply_to_id.blank?
 
-      raw = parent.source_id.to_s
-      # Umnico source_ids look like "umnico:1234567890"
-      numeric_str = raw.start_with?('umnico:') ? raw.delete_prefix('umnico:') : raw
-      Integer(numeric_str, 10) rescue nil
-    end
+    parent = message.conversation.messages.find_by(id: reply_to_id)
+    return nil if parent&.source_id.blank?
+
+    raw = parent.source_id.to_s
+    # Umnico source_ids look like "umnico:1234567890"
+    numeric_str = raw.start_with?('umnico:') ? raw.delete_prefix('umnico:') : raw
+    Integer(numeric_str, 10) rescue nil
   end
 
   def custom_id
