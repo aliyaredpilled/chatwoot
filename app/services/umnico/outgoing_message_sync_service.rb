@@ -8,6 +8,7 @@ class Umnico::OutgoingMessageSyncService
     return if lead_id.blank?
     return if webhook_message.blank?
     return if message_id.blank?
+    return if sent_from_chatwoot?
     return if duplicate_message?
 
     conversation = find_conversation
@@ -43,6 +44,27 @@ class Umnico::OutgoingMessageSyncService
 
   def message_attachments
     message_body['attachments'] || []
+  end
+
+  # Skip messages that originated from Chatwoot to avoid duplicates.
+  # Check both customId (if Umnico echoes it) and existing outgoing messages.
+  def sent_from_chatwoot?
+    # Method 1: customId set by SendOnUmnicoService
+    custom_id = webhook_message['customId'].to_s
+    return true if custom_id.start_with?('chatwoot:')
+
+    # Method 2: find a recent outgoing message in this conversation with matching text
+    conv = find_conversation
+    return false unless conv
+
+    text = message_text
+    return false if text.blank?
+
+    conv.messages
+      .where(message_type: :outgoing)
+      .where('source_id LIKE ?', 'umnico_out_%')
+      .where('created_at > ?', 2.minutes.ago)
+      .exists?(content: text)
   end
 
   def duplicate_message?
