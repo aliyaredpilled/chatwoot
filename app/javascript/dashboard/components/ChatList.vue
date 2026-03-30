@@ -971,12 +971,13 @@ watch(conversationFilters, (newVal, oldVal) => {
       <div v-if="chatListLoading" class="flex justify-center my-4">
         <Spinner class="text-n-brand" />
       </div>
-      <p
+      <div
         v-else-if="showEndOfListMessage"
-        class="p-4 text-center text-n-slate-11"
+        class="flex flex-col items-center gap-2 py-6 text-n-slate-10"
       >
-        {{ $t('CHAT_LIST.EOF') }}
-      </p>
+        <span class="i-lucide-coffee size-5 opacity-60" />
+        <span class="text-xs">{{ $t('CHAT_LIST.EOF') }}</span>
+      </div>
       <IntersectionObserver
         v-else
         :options="intersectionObserverOptions"
