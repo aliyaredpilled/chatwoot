@@ -49,29 +49,40 @@ module Umnico
       request(:post, "/messaging/#{lead_id}/history/#{source_real_id}", body: body.presence)
     end
 
-    # Send message to a lead
-    def send_message(lead_id:, text: nil, attachment: nil, source: nil, user_id: nil)
+    # Send message to a lead.
+    # custom_id: opaque string stored by Umnico for deduplication / matching (e.g. "chatwoot:42")
+    # reply_id:  numeric Umnico message ID to quote/reply to
+    def send_message(lead_id:, text: nil, attachment: nil, source: nil, user_id: nil, custom_id: nil, reply_id: nil)
       body = { message: {} }
       body[:message][:text] = text if text.present?
       body[:message][:attachment] = attachment if attachment.present?
       body[:source] = source if source.present?
       body[:userId] = user_id if user_id.present?
+      body[:customId] = custom_id if custom_id.present?
+      body[:replyId] = reply_id if reply_id.present?
 
       request(:post, "/messaging/#{lead_id}/send", body: body)
     end
 
-    # Upload file for attachment
-    def upload_file(file_path:, content_type: 'application/octet-stream')
+    # Upload file for attachment.
+    # source: realId of the channel (source.realId from conversation attrs)
+    # file_path: local path to the downloaded file
+    # content_type: MIME type of the file
+    # Returns the full upload response, e.g. { 'media' => {...}, 'type' => 'photo' }
+    def upload_file(source:, file_path:, content_type: 'application/octet-stream')
       uri = URI("#{@base_url}/messaging/upload")
 
       http = build_http(uri)
-      request = Net::HTTP::Post.new(uri)
-      request['Authorization'] = "bearer #{@api_token}"
+      req = Net::HTTP::Post.new(uri)
+      req['Authorization'] = "bearer #{@api_token}"
 
-      form_data = [['file', File.open(file_path), { content_type: content_type }]]
-      request.set_form(form_data, 'multipart/form-data')
+      form_data = [
+        ['source', source],
+        ['media', File.open(file_path), { content_type: content_type }]
+      ]
+      req.set_form(form_data, 'multipart/form-data')
 
-      response = http.request(request)
+      response = http.request(req)
       parsed = parse_response_body(response.body)
       return parsed if response.is_a?(Net::HTTPSuccess)
 

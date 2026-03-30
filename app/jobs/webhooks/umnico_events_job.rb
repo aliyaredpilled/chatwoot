@@ -13,6 +13,13 @@ class Webhooks::UmnicoEventsJob < ApplicationJob
     inbox = channel.inbox
     return if inbox.blank?
 
-    ::Umnico::IncomingMessageService.new(inbox: inbox, params: params).perform
+    case params['type']
+    when 'message.incoming'
+      ::Umnico::IncomingMessageService.new(inbox: inbox, params: params).perform
+    when 'message.outgoing'
+      ::Umnico::OutgoingMessageSyncService.new(inbox: inbox, params: params).perform
+    when 'customer.changed', 'customer.created'
+      ::Umnico::CustomerSyncService.new(inbox: inbox, params: params).perform
+    end
   end
 end

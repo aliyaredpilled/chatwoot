@@ -107,9 +107,39 @@ class Umnico::IncomingMessageService
                     else
                       @contact_inbox.conversations.where.not(status: :resolved).last
                     end
-    return if @conversation
+    unless @conversation
+      @conversation = ::Conversation.create!(conversation_params)
+    end
+    apply_messenger_label
+  end
 
-    @conversation = ::Conversation.create!(conversation_params)
+  def apply_messenger_label
+    label_name = messenger_label_name
+    return if label_name.blank?
+
+    label = label_name.downcase
+    current = @conversation.label_list || []
+    return if current.include?(label)
+
+    @conversation.update!(label_list: (current + [label]).uniq)
+  end
+
+  MESSENGER_LABELS = {
+    'max' => 'Max',
+    'ok' => 'Max',
+    'telebot' => 'Telegram',
+    'telegram' => 'Telegram',
+    'whatsapp2' => 'WhatsApp',
+    'waba' => 'WhatsApp',
+    'vk_group' => 'VK',
+    'viber_bot' => 'Viber',
+    'discord' => 'Discord',
+    'fb_messenger' => 'Facebook',
+    'instagramV3' => 'Instagram'
+  }.freeze
+
+  def messenger_label_name
+    MESSENGER_LABELS[integration_type]
   end
 
   def conversation_params
@@ -138,26 +168,50 @@ class Umnico::IncomingMessageService
       message_type: :incoming,
       sender: @contact,
       source_id: "umnico:#{message_id}",
-      content_attributes: {
-        external_created_at: webhook_message['datetime'],
-        lead_id: lead_id,
-        messenger_type: integration_type
-      }.compact
+      content_attributes: build_content_attributes
     )
 
     process_attachments(msg)
     msg
   end
 
+  def build_content_attributes
+    attrs = {
+      external_created_at: webhook_message['datetime'],
+      lead_id: lead_id,
+      messenger_type: integration_type
+    }
+
+    reply_to = webhook_message['replyTo']
+    if reply_to.present?
+      in_reply_to = {
+        text: reply_to['text'].presence,
+        sender: reply_to['sender']
+      }.compact
+      attrs[:in_reply_to] = in_reply_to
+
+      original = Message.find_by(
+        inbox_id: inbox.id,
+        source_id: "umnico:#{reply_to['messageId']}"
+      )
+      attrs[:in_reply_to_external_id] = original.id if original
+    end
+
+    attrs.compact
+  end
+
   def attachment_label
     return '' if message_attachments.blank?
 
     first = message_attachments.first
+    caption = message_body['caption'].presence || first['caption'].presence
     type = first['type'] || 'file'
-    "[#{type}]"
+    caption.presence || "[#{type}]"
   end
 
   def process_attachments(msg)
+    attachments_meta = []
+
     message_attachments.each do |att|
       url = att.dig('payload', 'url') || att['url'] || att['src']
       next if url.blank?
@@ -169,9 +223,22 @@ class Umnico::IncomingMessageService
         file_type: file_type,
         external_url: url
       )
+
+      attachments_meta << {
+        type: att['type'],
+        url: url,
+        name: att['text'].presence,
+        filesize: att['filesize'],
+        preview: att['preview']
+      }.compact
     rescue StandardError => e
       Rails.logger.error("Umnico: failed to process attachment: #{e.message}")
     end
+
+    return if attachments_meta.empty?
+
+    existing = msg.content_attributes || {}
+    msg.update_columns(content_attributes: existing.merge('attachments_meta' => attachments_meta))
   end
 
   def map_attachment_type(umnico_type)
@@ -186,7 +253,7 @@ class Umnico::IncomingMessageService
 
   def contact_attributes
     name = sender['login'].presence || sender['name'].presence || "Umnico #{customer_id}"
-    {
+    attrs = {
       name: name,
       identifier: contact_source_id,
       additional_attributes: {
@@ -197,5 +264,31 @@ class Umnico::IncomingMessageService
         profile_url: sender['profileUrl']
       }.compact
     }
+
+    # Enrich with data from Umnico customer API
+    enrich_from_umnico(attrs)
+  end
+
+  def enrich_from_umnico(attrs)
+    return attrs if customer_id.blank?
+
+    client = Umnico::ApiClient.new(api_token: channel.api_token)
+    customer = client.get_customer(customer_id)
+    return attrs unless customer.is_a?(Hash)
+
+    attrs[:name] = customer['name'].presence || attrs[:name]
+    attrs[:phone_number] = customer['phone'].presence
+    attrs[:email] = customer['email'].presence
+    attrs[:avatar_url] = customer['avatar'].presence
+
+    attrs[:additional_attributes][:address] = customer['address'].presence if customer['address'].present?
+
+    profiles = customer['profiles']
+    attrs[:additional_attributes][:profiles] = profiles if profiles.is_a?(Array) && profiles.any?
+
+    attrs
+  rescue StandardError => e
+    Rails.logger.warn("Umnico: failed to enrich contact #{customer_id}: #{e.message}")
+    attrs
   end
 end
