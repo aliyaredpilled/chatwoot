@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
@@ -63,9 +63,10 @@ const resetForm = () => {
   message.value = '';
 };
 
-const open = () => {
+const open = async () => {
   resetForm();
   dialogRef.value?.open();
+  await loadIntegrations();
 };
 
 const handleSend = async () => {
@@ -86,8 +87,6 @@ const handleSend = async () => {
     isSending.value = false;
   }
 };
-
-onMounted(loadIntegrations);
 
 defineExpose({ open });
 </script>
