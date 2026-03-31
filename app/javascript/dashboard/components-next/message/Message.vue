@@ -481,6 +481,27 @@ const avatarInfo = computed(() => {
   };
 });
 
+const senderLabel = computed(() => {
+  if (props.messageType !== MESSAGE_TYPES.OUTGOING) return '';
+  const sType = props.sender?.type ?? props.senderType;
+  if (sType === SENDER_TYPES.AGENT_BOT || sType === SENDER_TYPES.CAPTAIN_ASSISTANT) {
+    return props.sender?.name || 'AI Bot';
+  }
+  if (sType === SENDER_TYPES.USER) {
+    return props.sender?.name || '';
+  }
+  return '';
+});
+
+const isBotSender = computed(() => {
+  const sType = props.sender?.type ?? props.senderType;
+  return sType === SENDER_TYPES.AGENT_BOT || sType === SENDER_TYPES.CAPTAIN_ASSISTANT;
+});
+
+const senderLabelClass = computed(() => {
+  return isBotSender.value ? 'text-n-slate-10' : 'text-n-slate-11';
+});
+
 const avatarTooltip = computed(() => {
   if (props.contentAttributes?.externalEcho) {
     return replaceInstallationName(t('CONVERSATION.NATIVE_APP_ADVISORY'));
@@ -553,14 +574,22 @@ provideMessageContext({
         <Avatar v-bind="avatarInfo" :size="24" />
       </div>
       <div
-        class="[grid-area:bubble] flex"
+        class="[grid-area:bubble] flex flex-col"
         :class="{
-          'ltr:ml-8 rtl:mr-8 justify-end': orientation === ORIENTATION.RIGHT,
+          'ltr:ml-8 rtl:mr-8 items-end': orientation === ORIENTATION.RIGHT,
           'ltr:mr-8 rtl:ml-8': orientation === ORIENTATION.LEFT,
           'min-w-0': variant === MESSAGE_VARIANTS.EMAIL,
         }"
         @contextmenu="openContextMenu($event)"
       >
+        <div
+          v-if="senderLabel && !shouldGroupWithNext"
+          class="flex items-center gap-1 text-xs mb-0.5 ltr:mr-1 rtl:ml-1"
+          :class="senderLabelClass"
+        >
+          <span v-if="isBotSender" class="i-lucide-coffee size-3.5 opacity-70" />
+          <span>{{ senderLabel }}</span>
+        </div>
         <Component :is="componentToRender" />
       </div>
       <MessageError
