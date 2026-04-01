@@ -128,7 +128,15 @@ const isRead = computed(() => {
   return false;
 });
 
+const isPendingUmnicoConfirmation = computed(() => {
+  return (
+    isAUmnicoChannel.value &&
+    Boolean(contentAttributes.value?.umnico_delivery_pending)
+  );
+});
+
 const statusToShow = computed(() => {
+  if (isPendingUmnicoConfirmation.value) return MESSAGE_STATUS.PROGRESS;
   if (isRead.value) return MESSAGE_STATUS.READ;
   if (isDelivered.value) return MESSAGE_STATUS.DELIVERED;
   if (isSent.value) return MESSAGE_STATUS.SENT;

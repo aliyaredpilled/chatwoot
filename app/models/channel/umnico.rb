@@ -26,11 +26,12 @@ class Channel::Umnico < ApplicationRecord
   encrypts :api_token, deterministic: true if Chatwoot.encryption_configured?
 
   before_validation :generate_webhook_secret, on: :create
-  before_validation :fetch_umnico_account_info, on: :create
+  before_validation :fetch_umnico_account_info, if: :should_refresh_umnico_account_info?
 
   validates :api_token, presence: true, uniqueness: true
 
   after_create_commit :register_umnico_webhook
+  after_update_commit :refresh_umnico_webhook, if: :saved_change_to_api_token?
   before_destroy :unregister_umnico_webhook
 
   scope :active, -> { where(enabled: true) }
@@ -48,6 +49,10 @@ class Channel::Umnico < ApplicationRecord
   end
 
   private
+
+  def should_refresh_umnico_account_info?
+    will_save_change_to_api_token?
+  end
 
   def generate_webhook_secret
     self.webhook_secret ||= SecureRandom.hex(20)
@@ -69,7 +74,28 @@ class Channel::Umnico < ApplicationRecord
     Rails.logger.error("Umnico: failed to delete webhook #{webhook_id}: #{e.message}")
   end
 
+  def refresh_umnico_webhook
+    unregister_previous_webhook
+    register_umnico_webhook
+  end
+
+  def unregister_previous_webhook
+    previous_webhook_id = webhook_id_before_last_save.presence
+    previous_token = api_token_before_last_save.presence
+    return if previous_webhook_id.blank? || previous_token.blank?
+
+    ::Umnico::ApiClient
+      .new(api_token: previous_token)
+      .delete_webhook(previous_webhook_id)
+  rescue ::Umnico::ApiClient::Error => e
+    Rails.logger.error(
+      "Umnico: failed to delete previous webhook #{previous_webhook_id}: #{e.message}"
+    )
+  end
+
   def fetch_umnico_account_info
+    return if api_token.blank?
+
     response = api_client.get_account
     self.umnico_account_id = response.dig('account', 'id')
   rescue ::Umnico::ApiClient::Error => e

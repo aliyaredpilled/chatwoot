@@ -3,6 +3,7 @@ require 'open-uri'
 
 class Umnico::SendOnUmnicoService < Base::SendOnChannelService
   TEXT_CHUNK_LIMIT = 4_000
+  DELIVERY_CONFIRMATION_TIMEOUT = 30.seconds
 
   private
 
@@ -23,6 +24,8 @@ class Umnico::SendOnUmnicoService < Base::SendOnChannelService
     elsif message.outgoing_content.present?
       send_text_chunks(lead_id)
     end
+
+    mark_delivery_as_pending!
   end
 
   def conversation_attrs
@@ -67,6 +70,13 @@ class Umnico::SendOnUmnicoService < Base::SendOnChannelService
 
   def custom_id
     "chatwoot:#{message.id}"
+  end
+
+  def delivery_pending_attributes
+    (message.content_attributes || {}).merge(
+      'umnico_delivery_pending' => true,
+      'umnico_delivery_pending_since' => Time.current.iso8601
+    ).except('external_error')
   end
 
   def base_send_opts
@@ -168,5 +178,12 @@ class Umnico::SendOnUmnicoService < Base::SendOnChannelService
     end
 
     chunks
+  end
+
+  def mark_delivery_as_pending!
+    message.update!(content_attributes: delivery_pending_attributes)
+    ::Umnico::OutboundDeliveryTimeoutJob
+      .set(wait: DELIVERY_CONFIRMATION_TIMEOUT)
+      .perform_later(message.id, message.source_id)
   end
 end

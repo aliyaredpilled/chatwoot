@@ -12,6 +12,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import TextArea from 'next/textarea/TextArea.vue';
 import WhatsappReauthorize from '../channels/whatsapp/Reauthorize.vue';
 import { sanitizeAllowedDomains } from 'dashboard/helper/URLHelper';
+import { parseAPIErrorResponse } from 'dashboard/store/utils/api';
 
 export default {
   components: {
@@ -39,6 +40,8 @@ export default {
       hmacMandatory: false,
       allowMobileWebview: false,
       whatsAppInboxAPIKey: '',
+      umnicoApiToken: '',
+      isUpdatingUmnicoToken: false,
       isRequestingReauthorization: false,
       isSyncingTemplates: false,
       allowedDomains: '',
@@ -86,6 +89,30 @@ export default {
       this.$nextTick(() => {
         this.isSettingDefaults = false;
       });
+    },
+    async updateUmnicoApiToken() {
+      if (!this.umnicoApiToken.trim()) return;
+
+      this.isUpdatingUmnicoToken = true;
+      try {
+        const payload = {
+          id: this.inbox.id,
+          formData: false,
+          channel: {
+            api_token: this.umnicoApiToken.trim(),
+          },
+        };
+        await this.$store.dispatch('inboxes/updateInbox', payload);
+        this.umnicoApiToken = '';
+        useAlert(this.$t('INBOX_MGMT.EDIT.API.SUCCESS_MESSAGE'));
+      } catch (error) {
+        useAlert(
+          parseAPIErrorResponse(error) ||
+            this.$t('INBOX_MGMT.EDIT.API.ERROR_MESSAGE')
+        );
+      } finally {
+        this.isUpdatingUmnicoToken = false;
+      }
     },
     handleHmacFlag() {
       this.updateInbox();
@@ -233,6 +260,36 @@ export default {
       :help-text="$t('INBOX_MGMT.ADD.LINE_CHANNEL.API_CALLBACK.SUBTITLE')"
     >
       <woot-code :script="inbox.callback_webhook_url" lang="html" />
+    </SettingsFieldSection>
+  </div>
+  <div v-else-if="isAnUmnicoChannel" class="space-y-4">
+    <SettingsFieldSection
+      :label="$t('INBOX_MGMT.SETTINGS_POPUP.UMNICO_WEBHOOK_TITLE')"
+      :help-text="$t('INBOX_MGMT.SETTINGS_POPUP.UMNICO_WEBHOOK_SUBHEADER')"
+    >
+      <woot-code :script="inbox.callback_webhook_url" lang="html" />
+    </SettingsFieldSection>
+
+    <SettingsFieldSection
+      :label="$t('INBOX_MGMT.SETTINGS_POPUP.UMNICO_TOKEN_UPDATE_TITLE')"
+      :help-text="$t('INBOX_MGMT.SETTINGS_POPUP.UMNICO_TOKEN_UPDATE_SUBHEADER')"
+    >
+      <woot-input
+        v-model="umnicoApiToken"
+        class="[&>input]:!mb-0"
+        type="password"
+        :placeholder="
+          $t('INBOX_MGMT.SETTINGS_POPUP.UMNICO_TOKEN_UPDATE_PLACEHOLDER')
+        "
+      />
+      <div class="mt-3 flex justify-end">
+        <NextButton
+          :label="$t('INBOX_MGMT.SETTINGS_POPUP.UMNICO_TOKEN_UPDATE_BUTTON')"
+          :disabled="isUpdatingUmnicoToken || !umnicoApiToken.trim()"
+          :is-loading="isUpdatingUmnicoToken"
+          @click="updateUmnicoApiToken"
+        />
+      </div>
     </SettingsFieldSection>
   </div>
   <div v-else-if="isAWebWidgetInbox">

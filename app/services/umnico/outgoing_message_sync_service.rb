@@ -8,7 +8,12 @@ class Umnico::OutgoingMessageSyncService
     return if lead_id.blank?
     return if webhook_message.blank?
     return if message_id.blank?
-    return if sent_from_chatwoot?
+
+    if chatwoot_message.present?
+      confirm_chatwoot_message!
+      return
+    end
+
     return if duplicate_message?
 
     conversation = find_conversation
@@ -49,11 +54,21 @@ class Umnico::OutgoingMessageSyncService
   # Skip messages that originated from Chatwoot to avoid duplicates.
   # Check both customId (if Umnico echoes it) and existing outgoing messages.
   def sent_from_chatwoot?
-    # Method 1: customId set by SendOnUmnicoService
-    custom_id = webhook_message['customId'].to_s
-    return true if custom_id.start_with?('chatwoot:')
+    chatwoot_message.present? || recent_chatwoot_message_with_same_text?
+  end
 
-    # Method 2: find a recent outgoing message in this conversation with matching text
+  def chatwoot_message
+    return @chatwoot_message if defined?(@chatwoot_message)
+
+    custom_id = webhook_message['customId'].to_s
+    @chatwoot_message =
+      if custom_id.start_with?('chatwoot:')
+        message_id = custom_id.delete_prefix('chatwoot:').to_i
+        message_id.zero? ? nil : Message.find_by(id: message_id, inbox_id: inbox.id)
+      end
+  end
+
+  def recent_chatwoot_message_with_same_text?
     conv = find_conversation
     return false unless conv
 
@@ -65,6 +80,24 @@ class Umnico::OutgoingMessageSyncService
       .where('source_id LIKE ?', 'umnico_out_%')
       .where('created_at > ?', 2.minutes.ago)
       .exists?(content: text)
+  end
+
+  def confirm_chatwoot_message!
+    return if chatwoot_message.blank?
+
+    content_attributes = (chatwoot_message.content_attributes || {}).except(
+      'external_error',
+      'umnico_delivery_pending',
+      'umnico_delivery_pending_since'
+    ).merge(
+      'external_created_at' => webhook_message['datetime'],
+      'umnico_message_id' => message_id
+    ).compact
+
+    chatwoot_message.update!(
+      status: :sent,
+      content_attributes: content_attributes
+    )
   end
 
   def duplicate_message?

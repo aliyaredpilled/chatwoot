@@ -72,6 +72,9 @@ export default {
     isATelegramChannel() {
       return this.channelType === INBOX_TYPES.TELEGRAM;
     },
+    isAnUmnicoChannel() {
+      return this.channelType === INBOX_TYPES.UMNICO;
+    },
     isATwilioSMSChannel() {
       const { medium: medium = '' } = this.inbox;
       return this.isATwilioChannel && medium === 'sms';

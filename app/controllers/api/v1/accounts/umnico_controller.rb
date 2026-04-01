@@ -1,5 +1,6 @@
 class Api::V1::Accounts::UmnicoController < Api::V1::Accounts::BaseController
   before_action :find_inbox
+  rescue_from ::Umnico::ApiClient::Error, with: :render_umnico_error
 
   # GET /api/v1/accounts/:account_id/umnico/integrations?inbox_id=1
   def integrations
@@ -28,5 +29,12 @@ class Api::V1::Accounts::UmnicoController < Api::V1::Accounts::BaseController
   def find_inbox
     @inbox = Current.account.inboxes.find(params[:inbox_id])
     head :not_found unless @inbox.channel.is_a?(Channel::Umnico)
+  end
+
+  def render_umnico_error(error)
+    Rails.logger.error(
+      "Umnico controller error for inbox=#{@inbox&.id}: #{error.message}"
+    )
+    render json: { error: error.message }, status: :bad_gateway
   end
 end

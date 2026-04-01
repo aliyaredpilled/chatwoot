@@ -155,6 +155,8 @@
     "CANCEL_BUTTON": "Cancel",
     "LOADING_INTEGRATIONS": "Loading integrations...",
     "NO_INTEGRATIONS": "No integrations found for this inbox.",
+    "LOAD_ERROR": "Failed to load Umnico integrations.",
+    "RETRY_BUTTON": "Retry",
     "SUCCESS": "Message sent successfully.",
     "ERROR": "Failed to send message. Please try again."
   }

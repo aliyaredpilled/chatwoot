@@ -34,6 +34,7 @@ class Umnico::IncomingMessageService
     set_contact
     set_conversation
     create_message
+    enqueue_history_backfill if history_backfill_required?
   end
 
   private
@@ -102,6 +103,7 @@ class Umnico::IncomingMessageService
   end
 
   def set_conversation
+    @conversation_created = false
     @conversation = if inbox.lock_to_single_conversation
                       @contact_inbox.conversations.last
                     else
@@ -109,9 +111,24 @@ class Umnico::IncomingMessageService
                     end
     unless @conversation
       @conversation = ::Conversation.create!(conversation_params)
+      @conversation_created = true
     end
     apply_messenger_label
     enrich_conversation_from_lead
+  end
+
+  def enqueue_history_backfill
+    conv = @conversation
+    ib = inbox
+    Thread.new do
+      ::Umnico::HistoryBackfillService.new(conversation: conv, inbox: ib).perform
+    rescue StandardError => e
+      Rails.logger.warn("Umnico: history backfill failed for conversation #{conv.id}: #{e.message}")
+    end
+  end
+
+  def history_backfill_required?
+    params['isNewLead'] == true || @conversation_created == true
   end
 
   def apply_messenger_label

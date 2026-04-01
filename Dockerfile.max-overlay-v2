@@ -1,20 +1,16 @@
 FROM node:24-slim AS frontend-builder
 
-# Copy entire app source from chatwoot base + our overrides
 COPY --from=chatwoot/chatwoot:latest /app /app
+WORKDIR /app
 
-# Copy our modified JS files
-COPY app/javascript/dashboard/components-next/icon/provider.js /app/app/javascript/dashboard/components-next/icon/provider.js
-COPY app/javascript/dashboard/helper/inbox.js /app/app/javascript/dashboard/helper/inbox.js
-COPY app/javascript/shared/mixins/inboxMixin.js /app/app/javascript/shared/mixins/inboxMixin.js
-COPY app/javascript/dashboard/composables/useInbox.js /app/app/javascript/dashboard/composables/useInbox.js
-COPY app/javascript/dashboard/components-next/message/MessageMeta.vue /app/app/javascript/dashboard/components-next/message/MessageMeta.vue
-COPY app/javascript/dashboard/components-next/message/Message.vue /app/app/javascript/dashboard/components-next/message/Message.vue
-
-# Cafe theme + i18n
-COPY app/javascript/dashboard/components/ChatList.vue /app/app/javascript/dashboard/components/ChatList.vue
-COPY app/javascript/dashboard/i18n/locale/en/chatlist.json /app/app/javascript/dashboard/i18n/locale/en/chatlist.json
-COPY app/javascript/dashboard/i18n/locale/ru/chatlist.json /app/app/javascript/dashboard/i18n/locale/ru/chatlist.json
+# Copy the current fork worktree instead of a hand-maintained file list.
+# This keeps local image deploys aligned with the actual checkout.
+COPY package.json pnpm-lock.yaml postcss.config.js tailwind.config.js vite.config.ts .browserslistrc /app/
+COPY app /app/app
+COPY config /app/config
+COPY db /app/db
+COPY enterprise /app/enterprise
+COPY public /app/public
 
 # Install pnpm and rebuild
 RUN npm install -g pnpm@10 && cd /app && pnpm install --frozen-lockfile && SECRET_KEY_BASE=precompile_placeholder RAILS_ENV=production NODE_OPTIONS="--max-old-space-size=4096" npx vite build
@@ -22,24 +18,13 @@ RUN npm install -g pnpm@10 && cd /app && pnpm install --frozen-lockfile && SECRE
 # Final image
 FROM chatwoot/chatwoot:latest
 
+WORKDIR /app
+
 # Copy rebuilt frontend assets
 COPY --from=frontend-builder /app/public/vite /app/public/vite
 
-# Copy backend files
-COPY app/models/channel/max.rb /app/app/models/channel/max.rb
-COPY app/services/max/ /app/app/services/max/
-COPY app/jobs/channels/max_polling_scheduler_job.rb /app/app/jobs/channels/max_polling_scheduler_job.rb
-COPY app/jobs/channels/max_polling_job.rb /app/app/jobs/channels/max_polling_job.rb
-COPY db/migrate/20260327214500_create_channel_max.rb /app/db/migrate/20260327214500_create_channel_max.rb
-COPY app/models/channel/umnico.rb /app/app/models/channel/umnico.rb
-COPY app/services/umnico/ /app/app/services/umnico/
-COPY app/controllers/webhooks/umnico_controller.rb /app/app/controllers/webhooks/umnico_controller.rb
-COPY app/jobs/webhooks/umnico_events_job.rb /app/app/jobs/webhooks/umnico_events_job.rb
-COPY db/migrate/20260329120000_create_channel_umnico.rb /app/db/migrate/20260329120000_create_channel_umnico.rb
-COPY app/controllers/api/v1/accounts/inboxes_controller.rb /app/app/controllers/api/v1/accounts/inboxes_controller.rb
-COPY app/helpers/api/v1/inboxes_helper.rb /app/app/helpers/api/v1/inboxes_helper.rb
-COPY app/jobs/send_reply_job.rb /app/app/jobs/send_reply_job.rb
-COPY app/models/account.rb /app/app/models/account.rb
-COPY app/models/inbox.rb /app/app/models/inbox.rb
-COPY config/routes.rb /app/config/routes.rb
-COPY config/schedule.yml /app/config/schedule.yml
+# Copy the current Ruby app/config/db state from the fork.
+COPY app /app/app
+COPY config /app/config
+COPY db /app/db
+COPY enterprise /app/enterprise

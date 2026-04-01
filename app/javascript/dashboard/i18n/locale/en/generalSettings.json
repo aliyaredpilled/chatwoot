@@ -239,6 +239,7 @@
       "LIGHT_MODE": "Light",
       "DARK_MODE": "Dark",
       "SYSTEM_MODE": "System",
+      "CAFE_MODE": "Cafe",
       "SNOOZE_NOTIFICATION": "Snooze Notification"
     }
   },

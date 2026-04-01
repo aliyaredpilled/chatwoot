@@ -169,6 +169,7 @@ export default {
       if (
         this.isATwilioChannel ||
         this.isALineChannel ||
+        this.isAnUmnicoChannel ||
         this.isAPIInbox ||
         this.isAVoiceChannel ||
         (this.isAnEmailChannel && !this.inbox.provider) ||

@@ -30,7 +30,7 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
     service = Messages::StatusUpdateService.new(message, 'sent')
     service.perform
-    message.update!(content_attributes: {})
+    message.update!(content_attributes: retriable_content_attributes)
     ::SendReplyJob.perform_later(message.id)
   rescue StandardError => e
     render_could_not_create_error(e.message)
@@ -70,6 +70,10 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
   def already_translated_content_available?
     message.translations.present? && message.translations[permitted_params[:target_language]].present?
+  end
+
+  def retriable_content_attributes
+    message.content_attributes.except('external_error')
   end
 
   # API inbox check

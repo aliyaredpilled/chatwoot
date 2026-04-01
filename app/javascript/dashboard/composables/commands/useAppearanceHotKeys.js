@@ -5,6 +5,7 @@ import {
   ICON_LIGHT_MODE,
   ICON_DARK_MODE,
   ICON_SYSTEM_MODE,
+  ICON_CAFE_MODE,
 } from 'dashboard/helper/commandbar/icons';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
@@ -25,6 +26,11 @@ const getThemeOptions = t => [
     key: 'auto',
     label: t('COMMAND_BAR.COMMANDS.SYSTEM_MODE'),
     icon: ICON_SYSTEM_MODE,
+  },
+  {
+    key: 'cafe',
+    label: t('COMMAND_BAR.COMMANDS.CAFE_MODE'),
+    icon: ICON_CAFE_MODE,
   },
 ];
 

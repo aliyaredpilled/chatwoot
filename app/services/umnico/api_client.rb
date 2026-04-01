@@ -86,7 +86,7 @@ module Umnico
       parsed = parse_response_body(response.body)
       return parsed if response.is_a?(Net::HTTPSuccess)
 
-      raise Error, "status=#{response.code} body=#{parsed}"
+      raise Error, build_error_message(response.code, parsed)
     end
 
     # Get customer info
@@ -145,7 +145,7 @@ module Umnico
       parsed = parse_response_body(response.body)
       return parsed if response.is_a?(Net::HTTPSuccess)
 
-      raise Error, "status=#{response.code} body=#{parsed}"
+      raise Error, build_error_message(response.code, parsed)
     end
 
     def build_http(uri)
@@ -176,6 +176,50 @@ module Umnico
       JSON.parse(body)
     rescue JSON::ParserError
       body
+    end
+
+    def build_error_message(status_code, parsed)
+      details = extract_error_details(parsed)
+      return details if details.present?
+
+      "Umnico API request failed with status #{status_code}"
+    end
+
+    def extract_error_details(parsed)
+      case parsed
+      when Hash
+        parsed['message'].presence ||
+          parsed['error'].presence ||
+          extract_nested_errors(parsed['errors'])
+      when Array
+        extract_nested_errors(parsed)
+      else
+        parsed.to_s.presence
+      end
+    end
+
+    def extract_nested_errors(errors)
+      return if errors.blank?
+
+      Array(errors).filter_map do |entry|
+        case entry
+        when String
+          extract_message_from_string(entry)
+        when Hash
+          entry['message'].presence || extract_nested_errors(entry['errors'])
+        else
+          entry.to_s.presence
+        end
+      end.first
+    end
+
+    def extract_message_from_string(value)
+      return value if value.exclude?('{') && value.exclude?('[')
+
+      parsed = JSON.parse(value)
+      extract_error_details(parsed) || value
+    rescue JSON::ParserError
+      value
     end
   end
 end

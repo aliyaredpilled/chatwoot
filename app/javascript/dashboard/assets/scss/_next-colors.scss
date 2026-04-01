@@ -292,5 +292,159 @@
     --border-container: 255, 255, 255, 0;
     --white-alpha: 255, 255, 255, 0.1;
   }
+
+  .cafe {
+    // slate → warm brown/sand tones
+    --slate-1: 253 248 240;
+    --slate-2: 250 245 235;
+    --slate-3: 245 230 211;
+    --slate-4: 237 220 198;
+    --slate-5: 232 213 192;
+    --slate-6: 222 200 175;
+    --slate-7: 208 185 158;
+    --slate-8: 186 160 130;
+    --slate-9: 148 120 90;
+    --slate-10: 135 108 78;
+    --slate-11: 107 80 52;
+    --slate-12: 61 43 31;
+
+    // iris → caramel/coffee accent
+    --iris-1: 253 249 243;
+    --iris-2: 250 242 230;
+    --iris-3: 245 228 205;
+    --iris-4: 238 213 180;
+    --iris-5: 228 198 158;
+    --iris-6: 216 180 138;
+    --iris-7: 204 163 118;
+    --iris-8: 196 149 106;
+    --iris-9: 184 132 90;
+    --iris-10: 170 120 78;
+    --iris-11: 148 100 58;
+    --iris-12: 92 58 30;
+
+    // blue → warm brown-blue
+    --blue-1: 253 250 245;
+    --blue-2: 248 242 232;
+    --blue-3: 240 228 208;
+    --blue-4: 232 215 188;
+    --blue-5: 222 200 168;
+    --blue-6: 210 183 148;
+    --blue-7: 196 165 128;
+    --blue-8: 178 142 105;
+    --blue-9: 160 118 78;
+    --blue-10: 145 105 68;
+    --blue-11: 130 92 55;
+    --blue-12: 72 48 28;
+
+    // ruby → warm terracotta
+    --ruby-1: 255 251 248;
+    --ruby-2: 255 244 238;
+    --ruby-3: 252 228 216;
+    --ruby-4: 248 212 196;
+    --ruby-5: 242 196 178;
+    --ruby-6: 232 178 158;
+    --ruby-7: 218 158 138;
+    --ruby-8: 202 132 112;
+    --ruby-9: 192 108 82;
+    --ruby-10: 178 95 70;
+    --ruby-11: 162 78 52;
+    --ruby-12: 95 42 28;
+
+    // amber → golden honey (stays warm, fits naturally)
+    --amber-1: 254 252 248;
+    --amber-2: 254 248 232;
+    --amber-3: 255 242 194;
+    --amber-4: 255 232 156;
+    --amber-5: 248 222 119;
+    --amber-6: 238 208 108;
+    --amber-7: 225 188 92;
+    --amber-8: 215 160 52;
+    --amber-9: 245 190 58;
+    --amber-10: 238 178 22;
+    --amber-11: 158 95 0;
+    --amber-12: 82 55 32;
+
+    // teal → sage/olive
+    --teal-1: 250 253 248;
+    --teal-2: 243 248 240;
+    --teal-3: 224 240 228;
+    --teal-4: 204 232 215;
+    --teal-5: 184 222 200;
+    --teal-6: 161 208 185;
+    --teal-7: 131 190 165;
+    --teal-8: 95 168 142;
+    --teal-9: 62 148 118;
+    --teal-10: 52 138 108;
+    --teal-11: 38 120 92;
+    --teal-12: 22 62 48;
+
+    // gray → warm gray/taupe
+    --gray-1: 252 250 248;
+    --gray-2: 248 245 240;
+    --gray-3: 240 235 228;
+    --gray-4: 232 225 215;
+    --gray-5: 224 215 205;
+    --gray-6: 215 205 192;
+    --gray-7: 202 190 175;
+    --gray-8: 182 168 152;
+    --gray-9: 148 132 118;
+    --gray-10: 138 122 108;
+    --gray-11: 110 95 80;
+    --gray-12: 48 38 30;
+
+    // violet → mocha/espresso
+    --violet-1: 252 250 248;
+    --violet-2: 248 242 238;
+    --violet-3: 240 230 222;
+    --violet-4: 232 218 208;
+    --violet-5: 222 205 192;
+    --violet-6: 210 190 175;
+    --violet-7: 195 172 155;
+    --violet-8: 175 148 130;
+    --violet-9: 148 115 92;
+    --violet-10: 135 105 85;
+    --violet-11: 120 90 68;
+    --violet-12: 68 48 35;
+
+    // Semantic tokens — warm cream/beige
+    --background-color: 245 238 228;
+    --surface-1: 253 248 240;
+    --surface-2: 255 252 248;
+    --surface-active: 250 242 230;
+    --background-input-box: 92, 58, 30, 0.05;
+    --text-blue: 72 48 28;
+    --text-purple: 62 42 25;
+    --text-amber: 82 55 32;
+    --border-container: 232 218 200;
+    --border-strong: 222 205 185;
+    --border-weak: 238 228 215;
+    --border-blue-strong: 130 92 55;
+    --solid-1: 255 252 248;
+    --solid-2: 253 248 240;
+    --solid-3: 250 242 230;
+    --solid-active: 245 235 220;
+    --solid-amber: 248 235 215;
+    --solid-blue: 238 222 198;
+    --solid-blue-2: 252 248 240;
+    --solid-iris: 238 222 198;
+    --solid-purple: 235 218 198;
+    --solid-red: 248 218 205;
+    --solid-amber-button: 225 188 92;
+    --card-color: 255 252 248;
+    --overlay: 61, 43, 31, 0.15;
+    --overlay-avatar: 255, 252, 248, 0.67;
+    --button-color: 184 132 90;
+    --button-hover-color: 170, 120, 78, 0.25;
+    --label-background: 245 235 222;
+    --label-border: 92, 58, 30, 0.06;
+
+    --alpha-1: 208, 185, 158, 0.25;
+    --alpha-2: 196, 175, 150, 0.22;
+    --alpha-3: 255, 252, 248, 0.96;
+    --black-alpha-1: 61, 43, 31, 0.12;
+    --black-alpha-2: 61, 43, 31, 0.04;
+    --border-blue: 184, 132, 90, 0.5;
+    --white-alpha: 255, 252, 248, 0.8;
+  }
 }
 // NEXT COLORS END

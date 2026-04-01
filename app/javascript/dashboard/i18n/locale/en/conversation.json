@@ -237,6 +237,15 @@
           "CANCEL": "Cancel"
         }
       },
+      "CORRECTION_FEEDBACK": {
+        "TITLE": "You changed the agent reply",
+        "DESCRIPTION": "What exactly did you correct and why?",
+        "LABEL": "Comment",
+        "PLACEHOLDER": "Describe what was wrong or missing in the suggestion",
+        "HINT": "For example: factual error, missed context, too generic, wrong tone, or an important detail was omitted.",
+        "SKIP": "Skip",
+        "SAVE": "Save"
+      },
       "QUOTED_REPLY": {
         "ENABLE_TOOLTIP": "Include quoted email thread",
         "DISABLE_TOOLTIP": "Don't include quoted email thread",

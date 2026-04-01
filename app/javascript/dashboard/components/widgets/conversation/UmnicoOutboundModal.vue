@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import { parseAPIErrorResponse } from 'dashboard/store/utils/api';
 
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -20,6 +21,7 @@ const dialogRef = ref(null);
 const integrations = ref([]);
 const isLoadingIntegrations = ref(false);
 const isSending = ref(false);
+const integrationsError = ref('');
 const selectedSaId = ref('');
 const destination = ref('');
 const message = ref('');
@@ -44,20 +46,25 @@ const isFormValid = computed(
 const loadIntegrations = async () => {
   if (!umnicoInbox.value) return;
   isLoadingIntegrations.value = true;
+  integrationsError.value = '';
   try {
     const { data } = await umnicoAPI.getIntegrations(umnicoInbox.value.id);
     integrations.value = data;
     if (data.length === 1) {
       selectedSaId.value = data[0].id;
     }
-  } catch {
-    // silently fail — user will see empty list
+  } catch (error) {
+    integrations.value = [];
+    integrationsError.value =
+      parseAPIErrorResponse(error) || t('UMNICO_OUTBOUND.LOAD_ERROR');
+    useAlert(integrationsError.value);
   } finally {
     isLoadingIntegrations.value = false;
   }
 };
 
 const resetForm = () => {
+  integrationsError.value = '';
   selectedSaId.value = '';
   destination.value = '';
   message.value = '';
@@ -81,8 +88,10 @@ const handleSend = async () => {
     });
     useAlert(t('UMNICO_OUTBOUND.SUCCESS'));
     dialogRef.value?.close();
-  } catch {
-    useAlert(t('UMNICO_OUTBOUND.ERROR'));
+  } catch (error) {
+    const errorMessage =
+      parseAPIErrorResponse(error) || t('UMNICO_OUTBOUND.ERROR');
+    useAlert(errorMessage);
   } finally {
     isSending.value = false;
   }
@@ -105,6 +114,20 @@ defineExpose({ open });
     >
       <Spinner class="!w-4 !h-4" />
       <span>{{ t('UMNICO_OUTBOUND.LOADING_INTEGRATIONS') }}</span>
+    </div>
+
+    <div v-else-if="integrationsError" class="flex flex-col gap-3">
+      <p class="text-sm text-n-ruby-11">
+        {{ integrationsError }}
+      </p>
+      <Button
+        type="button"
+        variant="faded"
+        color="slate"
+        :label="t('UMNICO_OUTBOUND.RETRY_BUTTON')"
+        class="self-start"
+        @click="loadIntegrations"
+      />
     </div>
 
     <p v-else-if="integrations.length === 0" class="text-sm text-n-slate-11">

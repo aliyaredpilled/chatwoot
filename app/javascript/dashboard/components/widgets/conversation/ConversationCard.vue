@@ -15,6 +15,12 @@ import SLACardLabel from './components/SLACardLabel.vue';
 import ContextMenu from 'dashboard/components/ui/ContextMenu.vue';
 import VoiceCallStatus from './VoiceCallStatus.vue';
 
+const AGENT_NOTIFICATION_MARKERS = [
+  '[AGENT_SUGGESTION]',
+  '[AGENT_TRACE]',
+  '[AGENT_HANDOFF]',
+];
+
 const props = defineProps({
   activeLabel: { type: String, default: '' },
   chat: { type: Object, default: () => ({}) },
@@ -94,6 +100,14 @@ const hasUnread = computed(() => unreadCount.value > 0);
 const isInboxNameVisible = computed(() => !activeInbox.value);
 
 const lastMessageInChat = computed(() => getLastMessage(props.chat));
+
+const hasAgentNotification = computed(() => {
+  const content = lastMessageInChat.value?.content || '';
+  return (
+    !!lastMessageInChat.value?.private &&
+    AGENT_NOTIFICATION_MARKERS.some(marker => content.startsWith(marker))
+  );
+});
 
 const voiceCallData = computed(() => ({
   status: props.chat.additional_attributes?.call_status,
@@ -368,6 +382,12 @@ const deleteConversation = () => {
             :created-at-timestamp="chat.created_at"
             :conversation-id="chat.id"
           />
+        </span>
+        <span
+          class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 ltr:ml-auto rtl:mr-auto mt-1 min-w-[1rem] px-1 py-0 text-center text-white bg-n-amber-9"
+          :class="hasAgentNotification ? 'block' : 'hidden'"
+        >
+          +1
         </span>
         <span
           class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 ltr:ml-auto rtl:mr-auto mt-1 min-w-[1rem] px-1 py-0 text-center text-white bg-n-teal-9"

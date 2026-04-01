@@ -17,6 +17,8 @@ import ArticleSearchPopover from 'dashboard/routes/dashboard/helpcenter/componen
 import CopilotEditorSection from './CopilotEditorSection.vue';
 import MessageSignatureMissingAlert from './MessageSignatureMissingAlert.vue';
 import ReplyBoxBanner from './ReplyBoxBanner.vue';
+import AgentSuggestionBanner from './AgentSuggestionBanner.vue';
+import OperatorCorrectionFeedbackModal from './OperatorCorrectionFeedbackModal.vue';
 import QuotedEmailPreview from './QuotedEmailPreview.vue';
 import { REPLY_EDITOR_MODES } from 'dashboard/components/widgets/WootWriter/constants';
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
@@ -31,6 +33,7 @@ import {
 } from '@chatwoot/utils';
 import WhatsappTemplates from './WhatsappTemplates/Modal.vue';
 import ContentTemplates from './ContentTemplates/ContentTemplatesModal.vue';
+import MessageApi from 'dashboard/api/inbox/message';
 import { MESSAGE_MAX_LENGTH } from 'shared/helpers/MessageTypeHelper';
 import inboxMixin, { INBOX_FEATURES } from 'shared/mixins/inboxMixin';
 import { trimContent, debounce, getRecipients } from '@chatwoot/utils';
@@ -61,6 +64,7 @@ import { emitter } from 'shared/helpers/mitt';
 const EmojiInput = defineAsyncComponent(
   () => import('shared/components/emoji/EmojiInput.vue')
 );
+const CORRECTION_FEEDBACK_MARKER = '[AGENT_CORRECTION_FEEDBACK]';
 
 export default {
   components: {
@@ -68,6 +72,8 @@ export default {
     AttachmentPreview,
     AudioRecorder,
     ReplyBoxBanner,
+    AgentSuggestionBanner,
+    OperatorCorrectionFeedbackModal,
     EmojiInput,
     MessageSignatureMissingAlert,
     ReplyBottomPanel,
@@ -142,6 +148,10 @@ export default {
       showArticleSearchPopover: false,
       hasRecordedAudio: false,
       copilotAcceptedMessages: {},
+      pendingSuggestionContext: null,
+      showCorrectionFeedbackModal: false,
+      correctionFeedbackContext: null,
+      isSavingCorrectionFeedback: false,
     };
   },
   computed: {
@@ -450,6 +460,7 @@ export default {
         this.setCCAndToEmailsFromLastChat();
         // Reset Copilot editor state (includes cancelling ongoing generation)
         this.copilot.reset();
+        this.resetCorrectionFeedbackState();
       }
 
       if (this.isOnPrivateNote) {
@@ -844,6 +855,123 @@ export default {
             hasReplyTo: !!this.inReplyTo?.id,
           });
     },
+    normalizeCorrectionText(message = '') {
+      let normalizedMessage = message || '';
+
+      if (this.sendWithSignature && this.messageSignature && !this.isPrivate) {
+        const effectiveChannelType = getEffectiveChannelType(
+          this.channelType,
+          this.inbox?.medium || ''
+        );
+        normalizedMessage = removeSignature(
+          normalizedMessage,
+          this.messageSignature,
+          effectiveChannelType
+        );
+      }
+
+      return normalizedMessage
+        .replace(/\r\n/g, '\n')
+        .replace(/\s+/g, ' ')
+        .trim();
+    },
+    buildAiCopilotContentAttributes(editorMessage = '') {
+      if (this.isPrivate || !this.pendingSuggestionContext) {
+        return undefined;
+      }
+
+      const normalizedEditorMessage = this.normalizeCorrectionText(
+        editorMessage
+      );
+      if (!normalizedEditorMessage) {
+        return undefined;
+      }
+
+      const { runId, suggestionMessageId, traceMessageId } =
+        this.pendingSuggestionContext;
+
+      if (!runId && !suggestionMessageId && !traceMessageId) {
+        return undefined;
+      }
+
+      return {
+        ai_copilot: {
+          ...(runId ? { runId } : {}),
+          ...(suggestionMessageId ? { suggestionMessageId } : {}),
+          ...(traceMessageId ? { traceMessageId } : {}),
+        },
+      };
+    },
+    shouldOpenCorrectionFeedback(editorMessage = '') {
+      if (this.isPrivate || !this.pendingSuggestionContext?.text) {
+        return false;
+      }
+
+      const normalizedSuggestion = this.normalizeCorrectionText(
+        this.pendingSuggestionContext.text
+      );
+      const normalizedFinal = this.normalizeCorrectionText(editorMessage);
+
+      return !!normalizedSuggestion && normalizedSuggestion !== normalizedFinal;
+    },
+    openCorrectionFeedbackModal(finalText, sentMessage) {
+      this.correctionFeedbackContext = {
+        suggestion: this.pendingSuggestionContext?.text || '',
+        finalText,
+        runId: this.pendingSuggestionContext?.runId || null,
+        suggestionMessageId: this.pendingSuggestionContext?.suggestionMessageId,
+        traceMessageId: this.pendingSuggestionContext?.traceMessageId,
+        publicMessageId: sentMessage?.id ?? null,
+      };
+      this.showCorrectionFeedbackModal = true;
+    },
+    closeCorrectionFeedbackModal() {
+      this.showCorrectionFeedbackModal = false;
+      this.correctionFeedbackContext = null;
+      this.isSavingCorrectionFeedback = false;
+    },
+    resetCorrectionFeedbackState() {
+      this.pendingSuggestionContext = null;
+      this.closeCorrectionFeedbackModal();
+    },
+    onSkipCorrectionFeedback() {
+      this.closeCorrectionFeedbackModal();
+    },
+    buildCorrectionFeedbackNote(comment) {
+      return `${CORRECTION_FEEDBACK_MARKER}\n${JSON.stringify({
+        version: 1,
+        runId: this.correctionFeedbackContext?.runId ?? null,
+        publicMessageId: this.correctionFeedbackContext?.publicMessageId ?? null,
+        suggestionMessageId:
+          this.correctionFeedbackContext?.suggestionMessageId ?? null,
+        traceMessageId: this.correctionFeedbackContext?.traceMessageId ?? null,
+        suggestion: this.correctionFeedbackContext?.suggestion ?? '',
+        finalText: this.correctionFeedbackContext?.finalText ?? '',
+        comment,
+        savedAt: new Date().toISOString(),
+      })}`;
+    },
+    async onSaveCorrectionFeedback(comment) {
+      if (!comment.trim() || this.isSavingCorrectionFeedback) {
+        return;
+      }
+
+      this.isSavingCorrectionFeedback = true;
+
+      try {
+        await MessageApi.create({
+          conversationId: this.currentChat.id,
+          message: this.buildCorrectionFeedbackNote(comment.trim()),
+          private: true,
+        });
+        this.closeCorrectionFeedbackModal();
+      } catch (error) {
+        const errorMessage =
+          error?.response?.data?.error || this.$t('CONVERSATION.MESSAGE_ERROR');
+        this.isSavingCorrectionFeedback = false;
+        useAlert(errorMessage);
+      }
+    },
     async onSendReply() {
       const undefinedVariables = getUndefinedVariablesInMessage({
         message: this.message,
@@ -868,23 +996,67 @@ export default {
         this.confirmOnSendReply();
       }
     },
+    async onAcceptSuggestion(text) {
+      const suggestionText = text?.text || text || '';
+      // Send suggestion directly as a reply to the client
+      const messagePayload = {
+        conversationId: this.currentChat.id,
+        message: suggestionText,
+        private: false,
+        sender: this.sender,
+      };
+      this.pendingSuggestionContext = null;
+      await this.sendMessage(messagePayload);
+    },
+    onEditSuggestion(suggestionContext) {
+      const suggestionText = suggestionContext?.text || '';
+      // Insert suggestion text into reply editor for editing
+      this.replyType = REPLY_EDITOR_MODES.REPLY;
+      this.pendingSuggestionContext = suggestionContext
+        ? { ...suggestionContext }
+        : null;
+      this.$nextTick(() => {
+        this.message = suggestionText;
+      });
+    },
     async sendMessage(
       messagePayload,
       editorMessage = '',
       copilotAcceptedMessage = ''
     ) {
       try {
-        await this.$store.dispatch(
+        const contentAttributes = this.buildAiCopilotContentAttributes(
+          editorMessage || messagePayload.message || ''
+        );
+        const payloadToSend = contentAttributes
+          ? {
+              ...messagePayload,
+              contentAttributes: {
+                ...messagePayload.contentAttributes,
+                ...contentAttributes,
+              },
+            }
+          : messagePayload;
+
+        const sentMessage = await this.$store.dispatch(
           'createPendingMessageAndSend',
-          messagePayload
+          payloadToSend
         );
         emitter.emit(BUS_EVENTS.SCROLL_TO_MESSAGE);
         emitter.emit(BUS_EVENTS.MESSAGE_SENT);
         this.removeFromDraft();
-        this.sendMessageAnalyticsData(messagePayload.private, {
+        this.sendMessageAnalyticsData(payloadToSend.private, {
           editorMessage,
           copilotAcceptedMessage,
         });
+
+        if (this.shouldOpenCorrectionFeedback(editorMessage)) {
+          this.openCorrectionFeedbackModal(editorMessage, sentMessage);
+        }
+
+        if (this.pendingSuggestionContext) {
+          this.pendingSuggestionContext = null;
+        }
       } catch (error) {
         const errorMessage =
           error?.response?.data?.error || this.$t('CONVERSATION.MESSAGE_ERROR');
@@ -1245,6 +1417,16 @@ export default {
 
 <template>
   <ReplyBoxBanner :message="message" :is-on-private-note="isOnPrivateNote" />
+  <AgentSuggestionBanner
+    @accept="onAcceptSuggestion"
+    @edit="onEditSuggestion"
+  />
+  <OperatorCorrectionFeedbackModal
+    v-model:show="showCorrectionFeedbackModal"
+    :is-saving="isSavingCorrectionFeedback"
+    @save="onSaveCorrectionFeedback"
+    @skip="onSkipCorrectionFeedback"
+  />
   <div ref="replyEditor" class="reply-box" :class="replyBoxClass">
     <ReplyTopPanel
       :mode="replyType"

@@ -3,6 +3,15 @@ import { MESSAGE_TYPE } from 'widget/helpers/constants';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import { ATTACHMENT_ICONS } from 'shared/constants/messages';
 
+const TECHNICAL_MESSAGE_LABELS = {
+  '[AGENT_WORKING]': 'Агент думает',
+  '[AGENT_SUGGESTION]': 'Требуется подтверждение',
+  '[AGENT_TRACE]': 'Требуется подтверждение',
+  '[AGENT_HANDOFF]': 'Агент просит вашу помощь',
+  '[AGENT_NO_REPLY]': 'Агент промолчал',
+  '[AGENT_CORRECTION_FEEDBACK]': 'Комментарий к правке агента',
+};
+
 export default {
   name: 'MessagePreview',
   props: {
@@ -41,7 +50,12 @@ export default {
     parsedLastMessage() {
       const { content_attributes: contentAttributes } = this.message;
       const { email: { subject } = {} } = contentAttributes || {};
-      return this.getPlainText(subject || this.message.content);
+      const content = subject || this.message.content || '';
+      const technicalLabel = Object.entries(TECHNICAL_MESSAGE_LABELS).find(
+        ([marker]) => content.startsWith(marker)
+      )?.[1];
+
+      return technicalLabel || this.getPlainText(content);
     },
     lastMessageFileType() {
       const [{ file_type: fileType } = {}] = this.message.attachments;

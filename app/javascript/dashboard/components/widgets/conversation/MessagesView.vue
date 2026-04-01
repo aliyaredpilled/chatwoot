@@ -36,6 +36,15 @@ import wootConstants from 'dashboard/constants/globals';
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
 
+const HIDDEN_TECHNICAL_MARKERS = [
+  '[AGENT_WORKING]',
+  '[AGENT_SUGGESTION]',
+  '[AGENT_TRACE]',
+  '[AGENT_HANDOFF]',
+  '[AGENT_NO_REPLY]',
+  '[AGENT_CORRECTION_FEEDBACK]',
+];
+
 export default {
   components: {
     MessageList,
@@ -131,7 +140,13 @@ export default {
       return '';
     },
     getMessages() {
-      const messages = this.currentChat.messages || [];
+      const messages = (this.currentChat.messages || []).filter(message => {
+        const content = message?.content || '';
+        return !(
+          message?.private &&
+          HIDDEN_TECHNICAL_MARKERS.some(marker => content.startsWith(marker))
+        );
+      });
       if (this.isAWhatsAppChannel) {
         return filterDuplicateSourceMessages(messages);
       }
